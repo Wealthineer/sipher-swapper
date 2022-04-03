@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 //import "hardhat/console.sol";
 
-contract SipherSwapper{
+contract ERC1155Swapper{
     using Counters for Counters.Counter;
 
 //struct defining a swap and a transfer etc
@@ -19,7 +19,6 @@ contract SipherSwapper{
         uint256 id;
         address initiator;
         address partner;
-//        mapping(uint256 => Transfer) transfers;
         bool initiatorApproved;
         bool partnerApproved;
         bool executed;
@@ -52,11 +51,17 @@ contract SipherSwapper{
     }
 
     //function adding transfers to a swap - check that only people listed as parties can add transactions
-    function addTransferToSwap(uint _swap_id, address _to, address  _contract_address, uint256 _token_id, uint256 _amount) public {
+    function addTransferToSwap(uint _swap_id, address  _contract_address, uint256 _token_id, uint256 _amount) public {
         require(swaps[_swap_id].initiator != address(0x0), "Swap needs to exist");
         Swap memory swap = swaps[_swap_id];
         require(msg.sender == swap.initiator || msg.sender == swap.partner, "Swap can only be accessed by either initiator or partner");
-        Transfer memory transfer = Transfer(msg.sender, _to, _contract_address, _token_id, _amount);
+        address to;
+        if(msg.sender == swap.initiator) {
+            to = swap.partner;
+        } else if (msg.sender == swap.partner) {
+            to = swap.initiator;
+        }
+        Transfer memory transfer = Transfer(msg.sender, to, _contract_address, _token_id, _amount);
         Transfer[] storage access_transfers = transfers[_swap_id];
         access_transfers.push(transfer);
         emit TransferCreated(_swap_id, transfer.to, transfer.from, transfer.contract_address, transfer.id, transfer.amount);
@@ -88,7 +93,7 @@ contract SipherSwapper{
     function executeSwap(uint256 _id) public {
         require(swaps[_id].initiator != address(0x0), "Swap needs to exist");
         Swap storage swap = swaps[_id];
-        require(swap.partnerApproved && swap.initiatorApproved, "Swap needs to be approved");
+        require(swap.partnerApproved && swap.initiatorApproved, "Swap needs to be approved by both parties");
         Transfer[] memory swapTransfers = transfers[_id];
         for(uint256 i = 0; i < swapTransfers.length; i++) {
             ERC1155 nftContract = ERC1155(swapTransfers[i].contract_address);
