@@ -1,3 +1,5 @@
+---This contract has not been audited - make sure to check whether everything fits your needs before using it ---
+
 Usage of ERC1155Swapper:
 
 1.) Create a swap using createSwap(address _swap_partner):
